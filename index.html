@@ -112,14 +112,18 @@ button.tab.on small{color:#3d2f10}
 /* 休止符：弱化显示 */
 .chip.rest{opacity:.55;font-size:12px}
 .chip.rest.done{opacity:.2}
-/* 升半音/降半音/升降调记号：橙色区分 */
+/* 升半音/降半音/升调记号：橙色区分 */
 .chip.accidental{color:#ffb066;border-color:#6b4423;background:#171008}
 .chip.accidental.current{background:linear-gradient(180deg,#ffc182,#d0742a);color:#1d1004;border-color:#ffd9ad;
   box-shadow:0 0 14px rgba(255,158,76,.5)}
-/* 键位角标：右上 = ♯/♭/↑(升调)，右下 = ↓(降调) */
+/* 降调（低八度）记号：蓝色区分 */
+.chip.down{color:#7db8e8;border-color:#33517a;background:#0c1322}
+.chip.down.current{background:linear-gradient(180deg,#a8d4f5,#4a86c8);color:#0a1524;border-color:#bfe0fa;
+  box-shadow:0 0 14px rgba(110,170,235,.5)}
+/* 键位角标：右上 = ♯/♭/↑(升调，橙)，右下 = ↓(降调，蓝) */
 .chip{position:relative}
 .chip-sup{position:absolute;top:1px;right:2px;font-size:9px;line-height:1;color:#ffb066;font-weight:700;pointer-events:none}
-.chip-sub{position:absolute;bottom:1px;right:2px;font-size:9px;line-height:1;color:#8fb8d8;font-weight:700;pointer-events:none}
+.chip-sub{position:absolute;bottom:1px;right:2px;font-size:9px;line-height:1;color:#7db8e8;font-weight:700;pointer-events:none}
 /* 把位修饰生效时，孔内音符标签染金 */
 #harmonica.modded .hole-note-in{fill:#d8b74a}
 .song-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}

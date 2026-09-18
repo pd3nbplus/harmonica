@@ -305,6 +305,8 @@ document.addEventListener('mousedown', e => {
   else if(e.button === 2){ State.right = true; e.preventDefault(); }
   else return;
   AudioEngine.ensure();
+  // 页面内任意按下即接管（按钮除外——按钮的停止/切换由各自 click 处理）
+  if(!(e.target instanceof Element) || !e.target.closest('button')) takeover();
   onModifiersChanged();
 });
 document.addEventListener('mouseup', e => {
@@ -316,15 +318,20 @@ document.addEventListener('mouseup', e => {
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('auxclick', e => e.preventDefault());
-window.addEventListener('blur', panic);
-document.addEventListener('visibilitychange', () => { if(document.hidden) panic(); });
+window.addEventListener('blur', releaseHeld);
+document.addEventListener('visibilitychange', () => { if(document.hidden) releaseHeld(); });
 
-function panic(){
+// 窗口失焦 / 页面隐藏（用户在页面外操作）：只松开手动按住的音、复位修饰键，
+// 不打断自动演奏/回放——音频走 Web Audio 时钟已排程，页面外操作不应使其停止
+function releaseHeld(){
   State.left = State.right = State.mid = false;
   heldVoices.forEach(v => AudioEngine.noteOffVoice(v));
   heldVoices.clear();
-  Performer.stop();
-  holeEls.forEach(h => h.classList.remove('active'));
+  // 熄灭高亮时保留自动演奏/回放正在发声的孔
+  holeEls.forEach((h, i) => {
+    const autoSounding = [...Performer.voices].some(v => v.keyIndex === i);
+    if(!autoSounding) h.classList.remove('active');
+  });
   refreshStatus(); refreshMods();
 }
 
@@ -374,7 +381,8 @@ function selectSong(i){
       c.textContent = '–';
     } else {
       const pk = parseNote(nd[0]);
-      c.dataset.kind = (pk.acc !== 0 || pk.oct !== 0) ? 'acc' : 'note';
+      // 降调（低八度）单独归为 down 显示为蓝色，升半音/降半音/升调仍为 acc 橙色
+      c.dataset.kind = pk.oct < 0 ? 'down' : (pk.acc !== 0 || pk.oct > 0) ? 'acc' : 'note';
       // 键位为主 + 角标：右上 = 半音/升调，右下 = 降调
       const main = document.createElement('b');
       main.textContent = pk.key;
@@ -394,6 +402,7 @@ function renderChips(cursor){
     const i = Number(c.dataset.idx);
     c.className = ['chip',
       c.dataset.kind === 'acc' ? 'accidental' : '',
+      c.dataset.kind === 'down' ? 'down' : '',
       i < cursor ? 'done' : '',
       i === cursor ? 'current' : ''].filter(Boolean).join(' ');
   });
@@ -485,7 +494,7 @@ const Performer = {
     this.mode = 'auto';
     setModeTag('自动演奏');
     autoBtn.classList.add('on'); autoBtn.textContent = '■ 停止';
-    hint('自动演奏中……按任意演奏键可随时接管');
+    hint('自动演奏中……点击页面任意处或按演奏键可随时接管');
     const beat = 60 / song.bpm, ctx = AudioEngine.ctx;
     let t = ctx.currentTime + 0.3;
     song.notes.forEach((nd, i) => {
@@ -519,7 +528,7 @@ const Performer = {
   }
 };
 
-// 自动演奏 / 回放中，任意演奏键按下即接管
+// 自动演奏 / 回放中，页面内任意点击（非按钮）或按下演奏键即接管
 function takeover(){
   if(Performer.mode === 'idle') return;
   const wasAuto = Performer.mode === 'auto';
@@ -540,6 +549,7 @@ const Recorder = {
   toggle(){
     AudioEngine.ensure();
     if(!this.recording){
+      Performer.stop(); // 页面内操作：开始录音前先停下自动演奏/回放
       this.recording = true; this.events = []; this.t0 = AudioEngine.ctx.currentTime;
       recBtn.classList.add('rec-on'); recBtn.textContent = '■ 停止';
       setModeTag('● 录音中');
@@ -576,7 +586,7 @@ const Recorder = {
     Performer.stop();
     Performer.mode = 'playback';
     setModeTag('回放中');
-    hint('回放中……按任意演奏键可随时接管');
+    hint('回放中……点击页面任意处或按演奏键可随时接管');
     const t0 = this.events[0].t;
     for(const ev of this.events){
       const ms = (ev.t - t0) * 1000;
